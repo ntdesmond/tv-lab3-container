@@ -1,1 +1,8 @@
+# folders
+.vscode/
+
+# executables
+container
+
+# images
 rootfs.img

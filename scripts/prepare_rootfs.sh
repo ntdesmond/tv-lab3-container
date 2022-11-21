@@ -6,7 +6,7 @@ DESCRIPTION="Creates an ext4 image with filesystem extracted from a Docker image
 
 if (( $# < 2 ))
 then
-  echo -e "Usage: $0 TARGET_FILE DOCKER_IMAGE\n$DESCRIPTION"
+  echo -e "Usage: $0 TARGET_FILE DOCKER_IMAGE\n\n$DESCRIPTION\n"
   exit
 fi
 
@@ -21,7 +21,6 @@ echo "Created a temporary Docker container"
 # Prepare the target file
 echo "Creating the rootfs file... "
 dd if=/dev/zero of=$TARGET_FILE bs=100M count=10
-losetup -fP $TARGET_FILE
 mkfs.ext4 $TARGET_FILE
 
 # Mount the target
@@ -31,7 +30,7 @@ mount -o loop $TARGET_FILE $MOUNT_DIR
 echo "File created and mounted to $MOUNT_DIR"
 
 # Extract the filesystem
-docker export $DOCKER_CONTAINER_HASH | tar -C $MOUNT_DIR -xvf -
+docker export $DOCKER_CONTAINER_HASH | tar -C $MOUNT_DIR -xf -
 echo "Filesystem extracted to '$MOUNT_DIR'"
 
 # Remove the docker container
