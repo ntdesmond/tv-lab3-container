@@ -5,6 +5,7 @@
 #include <sched.h>
 #include <unistd.h>
 #include <iostream>
+#include <sstream>
 #include <cerrno>
 #include <csignal>
 #include <cstdlib>
@@ -20,12 +21,12 @@ std::string setup_loop(std::string filename) {
     // Get a name of a free loop device.
     // Based on https://stackoverflow.com/a/478960
 
-    char command[128] = {0,};
-    std::snprintf(command, sizeof(command), "losetup -fP --show %s", filename.c_str());
+    std::stringstream command;
+    command << "losetup -fP --show " << filename;
 
     std::array<char, 128> buffer;
     std::string result;
-    std::unique_ptr<FILE, decltype(&pclose)> pipe(popen(command, "r"), pclose);
+    std::unique_ptr<FILE, decltype(&pclose)> pipe(popen(command.str().c_str(), "r"), pclose);
     if (!pipe) {
         throw std::runtime_error("popen() failed for losetup");
     }
@@ -68,6 +69,12 @@ int child_main(void *arg) {
     // Remount procfs
     mount("proc", "/proc", "proc", 0, NULL);
     
+    // Connect network
+    sethostname("mycontainer", 7);
+    system("ip link set veth1 up");
+    system("ip addr add 10.3.13.36/24 dev veth1");
+    system("route add default gw 10.3.13.37 veth1");
+
     // Run the process
     char **argv = (char**)arg;
     execvp(argv[0], argv);
@@ -75,12 +82,24 @@ int child_main(void *arg) {
 }
 
 int main(int argc, char *argv[]) {
+    // Create network
+    system("ip link add veth0 type veth peer name veth1");
+    system("ip link set veth0 up");
+    system("brctl addif br0 veth0");
+
+    // Clone process
     int flags = CLONE_NEWNS | CLONE_NEWUTS | CLONE_NEWPID | CLONE_NEWIPC | CLONE_NEWNET;
     int pid = clone(child_main, child_stack + sizeof(child_stack), flags | SIGCHLD, argv + 1);
     if (pid < 0) {
         std::cerr << "clone failed: " << errno << std::endl;
         return 1;
     }
+
+    // Connect network
+    std::stringstream command;
+    command << "ip link set veth1 netns " << pid;
+    system(command.str().c_str());
+
     waitpid(pid, NULL, 0);
     return 0;
 }

@@ -1,5 +1,7 @@
 #!/bin/bash
 
+set -e
+
 TARGET_FILE=$1
 DOCKER_IMAGE=$2
 DESCRIPTION="Creates an ext4 image with filesystem extracted from a Docker image"
@@ -14,8 +16,8 @@ fi
 rm -f $TARGET_FILE
 
 # Pull image and create docker container
-docker pull ubuntu:16.04
-DOCKER_CONTAINER_HASH=$(docker create ubuntu:16.04)
+docker pull $DOCKER_IMAGE
+DOCKER_CONTAINER_HASH=$(docker create $DOCKER_IMAGE)
 echo "Created a temporary Docker container"
 
 # Prepare the target file
