@@ -15,9 +15,9 @@ restore:
 	umount -l rootfs
 	losetup -d $$(losetup -a | grep $(TARGET_FILE) | cut -d':' -f 1)
 
-.PHONY: run
-run:
+.PHONY: shell
+shell:
 	./container /bin/sh
 
-.PHONY: shell
-shell: run restore
+.PHONY: run
+run: shell restore
